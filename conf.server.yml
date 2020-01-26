@@ -1,0 +1,5 @@
+---
+port: 
+  localTest: 9101
+  staging: 8080
+  production: 8080

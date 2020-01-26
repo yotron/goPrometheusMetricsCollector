@@ -1,0 +1,178 @@
+---
+SplunkExample:
+  type: splunkRequest
+  restApiHost: https://splunk.yotron.de
+  restApiPort: 8089
+  restSearchParaGeneric: '&search_mode=realtime&output_mode=json'  ## do not change
+  authentication:
+    username:
+      localTest: <user_name>
+      staging: sys.splunk
+      production: sys.splunk
+    password:
+      localTest: YOPRO_AUTH_PASSWORD ## allowed "YOPRO_AUTH_PASSWORD" for expecting a environment variable "YOPRO_AUTH_PASSWORD" with the password (e.g. start with start.sh),"manually" for manual input during start or a json.filename (ending .json) or a string with the clear password.
+      staging: passwordV2.yml
+      production: passwordV2.yml
+  exporter:
+    lastCallFilename: splunk_last_call.json
+    lastMetricFilename: splunk_last_metric.json    
+    parallelization:
+      localTest: 10
+      staging: 1        
+      production: 1
+  jobs:
+    -
+      sid: splunk_query_example_1
+      description: Maximum of Splunk delivered since last call aggregated on 1 second.
+      splunkAnalyzeFrequencySeconds: -1
+      splunkRestApiSearch: 'search=search index=splunk_pruduction  source="/var/log/nginx/splunk-access.log" query_type="GET" ups_status=200 request_path!=/splunk/api/system/ping'
+      splunkRestApiTimechart: ' | timechart span=1s count by source | sort "/var/log/nginx/splunk-access.log" desc | head 1'
+      splunkRestApiAdditional: '&id=<sid>'
+      splunkRestApiEarliestTime: last_call
+      splunkRestApiLatestTime: now
+      splunkResultKeyName: /var/log/nginx/splunk-access.log
+      timeOut: 5
+    -
+      sid: splunk_query_example_2
+      description: Maximum of Splunk delivered since last call aggregated on 1 second.
+      splunkAnalyzeFrequencySeconds: -1
+      splunkRestApiSearch: 'search=search index=splunk_pruduction  source="/var/log/nginx/splunk-access.log" query_type="GET" ups_status=200 request_path!=/splunk/api/system/ping'
+      splunkRestApiTimechart: ' | timechart span=1s sum(bytes_sent) as send | head 1'
+      splunkRestApiAdditional: '&id=<sid>'
+      splunkRestApiEarliestTime: last_call
+      splunkRestApiLatestTime: now
+      splunkResultKeyName: /var/log/nginx/splunk-access.log
+      timeOut: 5
+    -
+      sid: splunk_query_example_3
+      description: Maximum of Splunk failed since last call aggregated on 1 second.
+      splunkAnalyzeFrequencySeconds: -1 
+      splunkRestApiSearch: 'search=search index=splunk_production  source="/var/log/nginx/splunk-access.log" query_type="GET" ups_status>299 ups_status<500 request_path!=/splunk/api/system/ping'
+      splunkRestApiTimechart: ' | timechart span=1s count by source | sort "/var/log/nginx/splunk-access.log" desc | head 1'
+      splunkRestApiAdditional: '&id=<sid>'
+      splunkRestApiEarliestTime: last_call
+      splunkRestApiLatestTime: now
+      splunkResultKeyName: /var/log/nginx/splunk-access.log
+      timeOut: 5
+localTestStatusCodes:
+  type: simpleAPIRequest
+  authentication:
+    username:
+      localTest:
+      staging:
+      production:
+    password:
+      localTest:
+      staging:
+      production:
+  apiUrlComplete:
+    localTest: http://localhost:8080/rawmetrics
+    staging: http://localhost:8080/rawmetrics
+    production: http://localhost:8080/rawmetrics
+  timeOut: 5
+  jobs:
+    -
+      sid: simpleAPIRequest_in_testing
+      description: This is a description of the simpleAPIRequest_in_testing
+      simpleJsonResultPath: metric1
+TomcatAppJMX:
+  type: simpleAPIRequest
+  authentication:
+    username:
+      localTest: max.mustermann
+      staging: admin       
+      production: admin
+    password:
+      localTest: manually
+      staging: passwordV2.yml
+      production: passwordV2.yml
+  apiUrlComplete: 
+    localTest: http://192.168.100.101/rest/api/storageinfo
+    staging: https://staging.yotron.de/rest/api/storageinfo
+    production: https://production.yotron.de/rest/api/storageinfo
+  timeOut: 5
+  jobs:
+    -
+      sid: simple_API_query_with_JSON_response_1
+      description: This is a description
+      simpleJsonResultPath: repositoriesSummaryList
+      goCommand: |
+        var repos []interface{}
+        _ = json.Unmarshal([]byte(queryEntry), &repos)
+        queryResult = strconv.Itoa(len(repos))
+      goCommanJMXExampledImports:
+        - strconv
+        - encoding/json
+    -
+      sid: simple_API_query_with_JSON_response_2
+      description: This is a description
+      simpleJsonResultPath: binariesSummary.splunkCount
+      goCommand: |
+        queryResult = strings.Replace(queryEntry, ",", "", -1)
+      goCommandImports:
+        - strings    
+    -
+      sid: simple_API_query_with_JSON_response_3
+      description: This is a description
+      simpleJsonResultPath: binariesSummary.binariesSize    
+      goCommand: |
+        words := strings.Fields(queryEntry)
+        valueFloat, _ := strconv.ParseFloat(words[0], 64)
+        switch words[1] {
+        case "bytes":
+          valueFloat = valueFloat
+        case "KB":
+          valueFloat = valueFloat * 1000
+        case "MB":
+          valueFloat = valueFloat * 1000 * 1000
+        case "GB":
+          valueFloat = valueFloat * 1000 * 1000 * 1000
+        case "TB":
+          valueFloat = valueFloat * 1000 * 1000 * 1000 * 1000
+        }
+        queryResult = strconv.FormatFloat(valueFloat, 'f', 0, 64)
+      goCommandImports:
+        - strings
+        - strconv
+JMXExample2:
+  type: simpleAPIRequest  
+  authentication:
+    username:
+      localTest: admin 
+      staging: admin       
+      production: admin
+    password:
+      localTest: <password>
+      staging: passwordV2.yml
+      production: passwordV2.yml
+  apiUrlComplete:
+    localTest: https://192.168.100.101/api/plugins/execute/haClusterDump
+    staging: https://staging.yotron.de/api/plugins/execute/haClusterDump
+    production: https://production.yotron.de/api/plugins/execute/haClusterDump
+  timeOut: 5
+  jobs:
+    -
+      sid: splunk_cluster_active
+      description: Cluster state
+      timeOut: 5
+      simpleJsonResultPath: active
+      goCommand: if queryEntry=="true" {queryResult = "1"} else {queryResult = "0"}
+    -
+      sid: solr_cluster_instance_count
+      description: Instance count of available cluster members
+      timeOut: 5
+      simpleJsonResultPath: members        
+      goCommand: |
+        var members  []map[string]interface{}
+        _ = json.Unmarshal([]byte(queryEntry), &members)
+        memberCount := 0
+        for memberElement := range members {
+          ele := members[memberElement]
+          if ele["serverState"].(string) == "RUNNING" {
+            memberCount++
+          }
+        }
+        queryResult = strconv.Itoa(memberCount)
+      goCommandImports:
+        - encoding/json
+        - strconv
