@@ -20,6 +20,6 @@ jobs:
       run: |
         go env -w GOPROXY=direct
         GO111MODULE=on go get -v -t -d ./...
-
+        
     - name: Build
       run: GO111MODULE=on go build -o PrometheusMetricsCollector -v main.go
